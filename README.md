@@ -2,6 +2,13 @@
 
 This repository contains a PowerShell script to automate the installation of essential software on a fresh Windows 10/11 installation using the Windows Package Manager (winget).
 
+```ruby
+require 'redcarpet'
+markdown = Redcarpet.new("Hello World!")
+puts markdown.to_html
+```
+
+
 ## Features
 * **Auto-update**: Updates all existing packages to the latest versions.
 * **Batch Install**: Installs 16+ popular apps (Browsers, Messengers, Utilities).
