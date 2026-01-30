@@ -2,6 +2,7 @@ $apps = @(
     "7zip.7zip",
     "Notepad++.Notepad++",
     "RustDesk.RustDesk",
+    "AnyDesk.AnyDesk",
     "VideoLAN.VLC",
     "PDFgear.PDFgear",
     "Google.Chrome.EXE",
@@ -9,9 +10,7 @@ $apps = @(
     "9NKSQGP7F2NH", # WhatsApp
     "Zoom.Zoom",
     "Yandex.Browser",
-    "Yandex.Disk",
     "Yandex.Messenger",
-    "Yandex.Music",
     "AdrienAllard.FileConverter",
     "alexx2000.DoubleCommander",
     "WinDirStat.WinDirStat"
