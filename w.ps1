@@ -7,7 +7,6 @@ $appsToInstall = @(
     "9NKSQGP7F2NH", "XPDDT99J9GKB5C"
 )
 
-# Словарь для замены ID на понятные названия
 $friendlyNames = @{
     "9NKSQGP7F2NH" = "WhatsApp"
     "XPDDT99J9GKB5C" = "Netflix"
@@ -28,7 +27,8 @@ foreach ($line in $updates) {
             $confirmUpdate = Read-Host "Update available for $name ($id). Apply? [y/n]"
             if ($confirmUpdate -eq 'y') {
                 Write-Host "Updating $id..." -ForegroundColor Yellow
-                winget upgrade --id $id --silent --accept-source-agreements --accept-package-agreements
+                # --force помогает обойти ошибки изменения файлов в portable-версиях
+                winget upgrade --id "$id" --silent --force --accept-source-agreements --accept-package-agreements
             }
         }
     }
@@ -47,7 +47,6 @@ foreach ($app in $appsToInstall) {
         continue
     }
 
-    # Определяем отображаемое имя: если есть в словаре — берем оттуда, если нет — оставляем ID
     $displayName = if ($friendlyNames.ContainsKey($app)) { $friendlyNames[$app] } else { $app }
     
     $prompt = "Install " + $displayName + "? [y/n]"
