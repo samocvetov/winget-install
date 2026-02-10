@@ -1,11 +1,6 @@
-$appsToInstall = @(
-    "7zip.7zip", "Notepad++.Notepad++", "RustDesk.RustDesk", "AnyDesk.AnyDesk", 
-    "VideoLAN.VLC", "PDFgear.PDFgear", "Google.Chrome", "Telegram.TelegramDesktop", 
-    "Zoom.Zoom", "Yandex.Browser", "Yandex.Messenger", "AdrienAllard.FileConverter", 
-    "alexx2000.DoubleCommander", "WinDirStat.WinDirStat", "Piriform.Recuva", 
-    "PowerSoftware.AnyBurn", "qBittorrent.qBittorrent", 
-    "9NKSQGP7F2NH", "XPDDT99J9GKB5C"
-)
+$apps = @("7zip.7zip", "Notepad++.Notepad++", "RustDesk.RustDesk", "AnyDesk.AnyDesk", "VideoLAN.VLC", "PDFgear.PDFgear", "Google.Chrome", "Telegram.TelegramDesktop", "Zoom.Zoom", "Yandex.Browser", "Yandex.Messenger", "AdrienAllard.FileConverter", "alexx2000.DoubleCommander", "WinDirStat.WinDirStat", "Piriform.Recuva", "PowerSoftware.AnyBurn", "qBittorrent.qBittorrent", "9NKSQGP7F2NH", "XPDDT99J9GKB5C", "Paddington.QuickLook", "DominikReichl.KeePass", "ventoy.ventoy", "Termius.Termius", "TimKosse.FileZilla.Client", "WireGuard.WireGuard", "REALiX.HWiNFO", "CPUID.CPU-Z", "TechPowerUp.GPU-Z", "angryziber.AngryIPScanner")
+
+$apps | % { winget install -id $_ -e --silent --accept-package-agreements --accept-source-agreements }
 
 $friendlyNames = @{
     "9NKSQGP7F2NH" = "WhatsApp"
