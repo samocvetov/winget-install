@@ -7,6 +7,12 @@ $appsToInstall = @(
     "9NKSQGP7F2NH", "XPDDT99J9GKB5C"
 )
 
+# Словарь для замены ID на понятные названия
+$friendlyNames = @{
+    "9NKSQGP7F2NH" = "WhatsApp"
+    "XPDDT99J9GKB5C" = "Netflix"
+}
+
 Write-Host "`n--- Checking for available updates ---" -ForegroundColor Cyan
 $updateRaw = winget upgrade --accept-source-agreements
 $updates = $updateRaw | Select-String -Pattern '^\S+' | Select-Object -Skip 2
@@ -33,27 +39,27 @@ if (-not $foundUpdates) {
 }
 
 Write-Host "`n--- Installing new packages ---" -ForegroundColor Cyan
-# Получаем список уже установленных программ один раз, чтобы не дергать winget в цикле
 $installedList = winget list --accept-source-agreements | Out-String
 
 foreach ($app in $appsToInstall) {
-    # Если ID программы уже есть в списке установленных — просто скипаем без вопросов
     if ($installedList -like "*$app*") {
         Write-Host "[SKIP] $app (Already installed)" -ForegroundColor Gray
         continue
     }
 
-    # Теперь имя точно будет видно
-    $prompt = "Install " + $app + "? [y/n]"
+    # Определяем отображаемое имя: если есть в словаре — берем оттуда, если нет — оставляем ID
+    $displayName = if ($friendlyNames.ContainsKey($app)) { $friendlyNames[$app] } else { $app }
+    
+    $prompt = "Install " + $displayName + "? [y/n]"
     $confirmation = Read-Host $prompt
     
     if ($confirmation -eq 'y') {
-        Write-Host "Processing $app..." -NoNewline -ForegroundColor White
+        Write-Host "Processing $displayName..." -NoNewline -ForegroundColor White
         $process = Start-Process winget -ArgumentList "install --id $app --silent --accept-source-agreements --accept-package-agreements" -NoNewWindow -Wait -PassThru
         if ($process.ExitCode -eq 0) {
-            Write-Host "`r[ OK ] $app                           " -ForegroundColor Green
+            Write-Host "`r[ OK ] $displayName                          " -ForegroundColor Green
         } else {
-            Write-Host "`r[FAIL] $app (Error: $($process.ExitCode))" -ForegroundColor Red
+            Write-Host "`r[FAIL] $displayName (Error: $($process.ExitCode))" -ForegroundColor Red
         }
     }
 }
