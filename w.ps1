@@ -13,16 +13,18 @@ $appsToInstall = @(
 Write-Host "`n--- Checking for updates ---" -ForegroundColor Cyan
 $updates = winget upgrade | Select-String -Pattern '^\S+' | Select-Object -Skip 2
 
-foreach ($line in $updates) {
-    $fields = $line.ToString() -split '\s{2,}'
-    if ($fields.Count -gt 1) {
-        $name = $fields[0].Trim()
-        $id = $fields[1].Trim()
-        if ($id -and $id -ne "ID") {
-            $confirmUpdate = Read-Host "Update $name ($id)? [y/n]"
-            if ($confirmUpdate -eq 'y') {
-                Write-Host "Updating $id..." -ForegroundColor Yellow
-                winget upgrade --id $id --silent --accept-source-agreements --accept-package-agreements
+if ($updates) {
+    foreach ($line in $updates) {
+        $fields = $line.ToString() -split '\s{2,}'
+        if ($fields.Count -gt 1) {
+            $name = $fields[0].Trim()
+            $id = $fields[1].Trim()
+            if ($id -and $id -ne "ID") {
+                $confirmUpdate = Read-Host "Update $name ($id)? [y/n]"
+                if ($confirmUpdate -eq 'y') {
+                    Write-Host "Updating $id..." -ForegroundColor Yellow
+                    winget upgrade --id $id --silent --accept-source-agreements --accept-package-agreements
+                }
             }
         }
     }
@@ -44,5 +46,5 @@ foreach ($app in $appsToInstall) {
     }
 }
 
-Write-Host "`nDone!" -ForegroundColor Cyan
+Write-Host "Done" -ForegroundColor Cyan
 if (Test-Path $PSCommandPath) { Remove-Item $PSCommandPath -Force }
