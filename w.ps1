@@ -19,7 +19,8 @@ foreach ($app in $apps) {
         continue
     }
     $name = if ($friendlyNames.ContainsKey($app)) { $friendlyNames[$app] } else { $app }
-    if ((Read-Host "Install $name? [y/n]") -eq 'y') {
+    $confirmation = Read-Host "Install $name? [y/n]"
+    if ($confirmation -eq 'y') {
         Write-Host "Installing $name..." -NoNewline
         $p = Start-Process winget -ArgumentList "install --id $app --silent --accept-source-agreements --accept-package-agreements" -NoNewWindow -Wait -PassThru
         if ($p.ExitCode -eq 0) { Write-Host "`r[ OK ] $name" -F Green } 
