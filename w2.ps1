@@ -14,40 +14,46 @@ $friendlyNames = @{
     "XPDDT99J9GKB5C" = "Samsung Magician"
 }
 
-# --- ФУНКЦИЯ СОЗДАНИЯ ЯРЛЫКОВ ---
+# --- ФУНКЦИЯ СОЗДАНИЯ ЯРЛЫКОВ (ПО ИМЕНИ ФАЙЛА) ---
 function Add-WingetShortcut {
     param (
-        [string]$AppId,
-        [string]$FriendlyName
+        [string]$AppId
     )
     
-    # Пропускаем приложения из Microsoft Store (у них ID без точек, длинные коды)
-    if ($AppId -notmatch "\.") { return }
-
+    # Эта функция работает только для портативных утилит, которые Winget кладет в папку Links.
+    # Обычные установщики (Chrome, Zoom) создают ярлыки сами.
+    
     # Пути
     $StartMenuPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"
     $WingetLinksPath = "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
     
-    # Пытаемся найти исполняемый файл в папке линков Winget
-    # Берем часть имени после точки (например, "Winbox" из "Mikrotik.Winbox") для поиска
-    $cleanName = $AppId.Split('.')[-1]
+    # Пытаемся угадать имя файла. Берем часть ID после последней точки.
+    # Например: из "Mikrotik.Winbox" берем "Winbox"
+    if ($AppId -match "\.") {
+        $searchName = $AppId.Split('.')[-1]
+    } else {
+        return # Если это ID из Store (без точек), пропускаем, они сами ставятся в пуск
+    }
     
-    # Ищем exe файл, содержащий имя (например *Winbox*.exe)
-    $targetExe = Get-ChildItem -Path $WingetLinksPath -Filter "*.exe" -ErrorAction SilentlyContinue | 
-                 Where-Object { $_.Name -like "*$cleanName*" } | 
-                 Select-Object -First 1
+    # Ищем любой .exe файл, содержащий это имя
+    $targetExe = Get-ChildItem -Path $WingetLinksPath -Filter "*$searchName*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
 
     if ($targetExe) {
-        $shortcutPath = "$StartMenuPath\$FriendlyName.lnk"
+        # Имя ярлыка берем из имени самого файла (без .exe)
+        # Например: winbox64.exe -> ярлык будет называться "winbox64"
+        $shortcutName = $targetExe.BaseName 
+        $shortcutPath = "$StartMenuPath\$shortcutName.lnk"
         
-        # Создаем ярлык, только если его еще нет
         if (-not (Test-Path $shortcutPath)) {
             try {
                 $WScript = New-Object -ComObject WScript.Shell
                 $Shortcut = $WScript.CreateShortcut($shortcutPath)
                 $Shortcut.TargetPath = $targetExe.FullName
+                $Shortcut.WorkingDirectory = $targetExe.DirectoryName
                 $Shortcut.Save()
-                Write-Host "   [+] Created shortcut for $FriendlyName" -ForegroundColor DarkGray
+                
+                # Иконка подтянется автоматически из TargetPath
+                Write-Host "   [+] Created shortcut: $shortcutName" -ForegroundColor DarkGray
             } catch {
                 Write-Host "   [!] Failed to create shortcut" -ForegroundColor DarkGray
             }
@@ -57,24 +63,18 @@ function Add-WingetShortcut {
 # --------------------------------
 
 Write-Host "`n--- Checking for available updates ---" -ForegroundColor Cyan
-# Получаем сырой вывод и фильтруем его
 $updateRaw = winget upgrade --accept-source-agreements
 $lines = $updateRaw | Select-String -Pattern '^\S+' | Select-Object -Skip 2
 
 $foundUpdates = $false
 foreach ($line in $lines) {
-    # Разбиваем строку по группам пробелов (минимум 2 пробела)
     $columns = $line.ToString() -split '\s{2,}'
-    
     if ($columns.Count -ge 2) {
         $name = $columns[0].Trim()
         $id = $columns[1].Trim()
 
-        # Валидация ID: убираем заголовки и пустые строки
         if ($id -and $id -ne "ID" -and $id -ne "Name" -and $id -notlike "---*") {
             $foundUpdates = $true
-            
-            # Если в ID попал пробел (ошибка парсинга), берем только первое слово до пробела
             if ($id -match "\s") { $id = ($id -split "\s")[0] }
 
             $confirmUpdate = Read-Host "Update available for $name ($id). Apply? [y/n]"
@@ -96,6 +96,8 @@ $installedList = winget list --accept-source-agreements | Out-String
 foreach ($app in $appsToInstall) {
     if ($installedList -like "*$app*") {
         Write-Host "[SKIP] $app (Already installed)" -ForegroundColor Gray
+        # Проверяем, нужен ли ярлык, даже если приложение уже установлено
+        Add-WingetShortcut -AppId $app
         continue
     }
 
@@ -109,9 +111,8 @@ foreach ($app in $appsToInstall) {
         if ($process.ExitCode -eq 0) {
             Write-Host "`r[ OK ] $displayName                       " -ForegroundColor Green
             
-            # --- ВЫЗОВ ФУНКЦИИ СОЗДАНИЯ ЯРЛЫКА ---
-            Add-WingetShortcut -AppId $app -FriendlyName $displayName
-            # -------------------------------------
+            # --- Создаем ярлык после успешной установки ---
+            Add-WingetShortcut -AppId $app
             
         } else {
             Write-Host "`r[FAIL] $displayName (Error: $($process.ExitCode))" -ForegroundColor Red
@@ -120,4 +121,4 @@ foreach ($app in $appsToInstall) {
 }
 
 Write-Host "`nDone!" -ForegroundColor Cyan
-if (Test-Path $PSCommandPath) { Remove-Item $PSCommandPath -Force }
+Start-Sleep -Seconds 3
