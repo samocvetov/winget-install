@@ -5,12 +5,13 @@ $appsToInstall = @(
 	"WinDirStat.WinDirStat", "Piriform.Recuva", "Paddington.QuickLook", "DominikReichl.KeePass",
 	"ventoy.ventoy", "Termius.Termius", "TimKosse.FileZilla.Client", "WireGuard.WireGuard",
 	"REALiX.HWiNFO", "CPUID.CPU-Z",	"TechPowerUp.GPU-Z", "angryziber.AngryIPScanner",
-    "9NKSQGP7F2NH", "XPDDT99J9GKB5C"
+    "9NKSQGP7F2NH", "9NV4BS3L1H4S", "XPDDT99J9GKB5C"
 )
 
 $friendlyNames = @{
     "9NKSQGP7F2NH" = "WhatsApp"
-    "XPDDT99J9GKB5C" = "Netflix"
+	"9NV4BS3L1H4S" = "QuickLook"
+    "XPDDT99J9GKB5C" = "Samsung Magician"
 }
 
 Write-Host "`n--- Checking for available updates ---" -ForegroundColor Cyan
