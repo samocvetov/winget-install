@@ -13,23 +13,26 @@ $friendlyNames = @{
 }
 
 Write-Host "`n--- Checking for available updates ---" -ForegroundColor Cyan
-# Получаем чистый список ID, требующих обновления
+# Получаем сырой вывод и фильтруем его
 $updateRaw = winget upgrade --accept-source-agreements
 $lines = $updateRaw | Select-String -Pattern '^\S+' | Select-Object -Skip 2
 
 $foundUpdates = $false
 foreach ($line in $lines) {
-    # Разбиваем строку по широким пробелам (минимум 2 пробела между колонками)
+    # Разбиваем строку по группам пробелов (минимум 2 пробела)
     $columns = $line.ToString() -split '\s{2,}'
     
     if ($columns.Count -ge 2) {
         $name = $columns[0].Trim()
         $id = $columns[1].Trim()
 
-        # Игнорируем заголовки и пустые ID
+        # Валидация ID: убираем заголовки и пустые строки
         if ($id -and $id -ne "ID" -and $id -ne "Name" -and $id -notlike "---*") {
             $foundUpdates = $true
-            # Четкий запрос только по ID
+            
+            # Если в ID попал пробел (ошибка парсинга), берем только первое слово до пробела
+            if ($id -match "\s") { $id = ($id -split "\s")[0] }
+
             $confirmUpdate = Read-Host "Update available for $name ($id). Apply? [y/n]"
             if ($confirmUpdate -eq 'y') {
                 Write-Host "Updating $id..." -ForegroundColor Yellow
