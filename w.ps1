@@ -7,27 +7,33 @@ $appsToInstall = @(
     "9NKSQGP7F2NH", "XPDDT99J9GKB5C"
 )
 
-Write-Host "`n--- Checking for updates ---" -ForegroundColor Cyan
-$updates = winget upgrade | Select-String -Pattern '^\S+' | Select-Object -Skip 2
+Write-Host "`n--- Checking for available updates ---" -ForegroundColor Cyan
+$updateRaw = winget upgrade --accept-source-agreements
+$updates = $updateRaw | Select-String -Pattern '^\S+' | Select-Object -Skip 2
 
-if ($updates) {
-    foreach ($line in $updates) {
-        $fields = $line.ToString() -split '\s{2,}'
-        if ($fields.Count -gt 1) {
-            $name = $fields[0].Trim()
-            $id = $fields[1].Trim()
-            if ($id -and $id -ne "ID") {
-                $confirmUpdate = Read-Host "Update $name ($id)? [y/n]"
-                if ($confirmUpdate -eq 'y') {
-                    Write-Host "Updating $id..." -ForegroundColor Yellow
-                    winget upgrade --id $id --silent --accept-source-agreements --accept-package-agreements
-                }
+$foundUpdates = $false
+foreach ($line in $updates) {
+    $fields = $line.ToString() -split '\s{2,}'
+    if ($fields.Count -gt 1) {
+        $name = $fields[0].Trim()
+        $id = $fields[1].Trim()
+        
+        if ($id -and $id -ne "ID" -and $id -ne "Name") {
+            $foundUpdates = $true
+            $confirmUpdate = Read-Host "Update available for $name ($id). Apply? [y/n]"
+            if ($confirmUpdate -eq 'y') {
+                Write-Host "Updating $id..." -ForegroundColor Yellow
+                winget upgrade --id $id --silent --accept-source-agreements --accept-package-agreements
             }
         }
     }
 }
 
-Write-Host "`n--- Installing packages ---" -ForegroundColor Cyan
+if (-not $foundUpdates) {
+    Write-Host "No updates required." -ForegroundColor Green
+}
+
+Write-Host "`n--- Installing new packages ---" -ForegroundColor Cyan
 foreach ($app in $appsToInstall) {
     $confirmation = Read-Host "Install $app? [y/n]"
     if ($confirmation -eq 'y') {
@@ -43,5 +49,5 @@ foreach ($app in $appsToInstall) {
     }
 }
 
-Write-Host "Done" -ForegroundColor Cyan
+Write-Host "`nDone!" -ForegroundColor Cyan
 if (Test-Path $PSCommandPath) { Remove-Item $PSCommandPath -Force }
