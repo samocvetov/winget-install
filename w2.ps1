@@ -1,5 +1,5 @@
 # --- НАСТРОЙКИ СКРИПТА ---
-$ScriptVersion = "6.2.12"
+$ScriptVersion = "6.2.14"
 
 # Очищаем экран и выводим заголовок
 Clear-Host
@@ -24,7 +24,7 @@ $friendlyNames = @{
     "XPDDT99J9GKB5C" = "Samsung Magician"
 }
 
-# --- ФУНКЦИЯ СОЗДАНИЯ ЯРЛЫКОВ С РЕЗОЛВИНГОМ СИМЛИНКОВ ---
+# --- ФУНКЦИЯ СОЗДАНИЯ ЯРЛЫКОВ ---
 function Add-WingetShortcut {
     param (
         [string]$AppId
@@ -32,47 +32,61 @@ function Add-WingetShortcut {
     
     $StartMenuPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"
     $WingetLinksPath = "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
+    $WingetPackagesPath = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages"
     
-    # СЛОВАРЬ ИСКЛЮЧЕНИЙ: Если exe называется не так, как ID пакета
+    # СЛОВАРЬ ИСКЛЮЧЕНИЙ: Точное имя exe файла для поиска
     $exeOverrides = @{
         "ventoy.ventoy" = "Ventoy2Disk.exe"
+        "angryziber.AngryIPScanner" = "ipscan.exe"
     }
 
-    # 1. Определяем паттерн поиска
+    # 1. Определяем имя файла для поиска
     if ($exeOverrides.ContainsKey($AppId)) {
-        # Если есть в исключениях (как Ventoy), ищем точное имя
-        $searchPattern = $exeOverrides[$AppId]
+        $searchFileName = $exeOverrides[$AppId]
     }
     elseif ($AppId -match "\.") {
-        # Иначе берем имя после точки (Winbox из Mikrotik.Winbox)
         $cleanName = $AppId.Split('.')[-1]
-        $searchPattern = "*$cleanName*.exe"
+        $searchFileName = "*$cleanName*.exe"
     } 
     else {
         return 
     }
     
-    # 2. Ищем файл в папке Links
-    $linkFile = Get-ChildItem -Path $WingetLinksPath -Filter $searchPattern -ErrorAction SilentlyContinue | Select-Object -First 1
+    # ПЕРЕМЕННАЯ ДЛЯ ХРАНЕНИЯ НАЙДЕННОГО ФАЙЛА
+    $targetFile = $null
 
-    if ($linkFile) {
-        $shortcutName = $linkFile.BaseName 
-        $shortcutPath = "$StartMenuPath\$shortcutName.lnk"
+    # 2. ПОПЫТКА №1: Ищем в папке Links (быстрый способ)
+    $targetFile = Get-ChildItem -Path $WingetLinksPath -Filter $searchFileName -ErrorAction SilentlyContinue | Select-Object -First 1
 
-        # --- МАГИЯ: НАХОДИМ НАСТОЯЩИЙ ПУТЬ ---
-        $realPath = $linkFile.FullName
+    # 3. ПОПЫТКА №2: (ФОЛЛБЭК) Если в Links нет, ищем в папке установки Packages
+    if (-not $targetFile) {
+        # Ищем папку пакета (по ID)
+        $packageDir = Get-ChildItem -Path $WingetPackagesPath -Filter "${AppId}*" -Directory -ErrorAction SilentlyContinue | 
+                      Sort-Object LastWriteTime -Descending | Select-Object -First 1
         
+        if ($packageDir) {
+            # Ищем exe внутри папки пакета (рекурсивно)
+            $targetFile = Get-ChildItem -Path $packageDir.FullName -Filter $searchFileName -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        }
+    }
+
+    # 4. СОЗДАНИЕ ЯРЛЫКА
+    if ($targetFile) {
+        # Имя ярлыка берем строго из имени файла (без переименований)
+        $shortcutName = $targetFile.BaseName
+        $shortcutPath = "$StartMenuPath\$shortcutName.lnk"
+        $realPath = $targetFile.FullName
+
+        # Обработка симлинков
         try {
-            if ($linkFile.LinkType -eq 'SymbolicLink') {
-                $target = $linkFile.Target
+            if ($targetFile.LinkType -eq 'SymbolicLink') {
+                $target = $targetFile.Target
                 if (-not [System.IO.Path]::IsPathRooted($target)) {
-                    $target = Join-Path $linkFile.DirectoryName $target
+                    $target = Join-Path $targetFile.DirectoryName $target
                 }
                 $realPath = (Get-Item $target).FullName
             }
-        } catch {
-            Write-Host "   [!] Could not resolve symlink, using default path" -ForegroundColor DarkGray
-        }
+        } catch {}
 
         # Удаляем старый ярлык
         if (Test-Path $shortcutPath) { Remove-Item $shortcutPath -Force }
@@ -81,18 +95,17 @@ function Add-WingetShortcut {
             $WScript = New-Object -ComObject WScript.Shell
             $Shortcut = $WScript.CreateShortcut($shortcutPath)
             
-            $Shortcut.TargetPath = $linkFile.FullName
-            $Shortcut.WorkingDirectory = $linkFile.DirectoryName
+            $Shortcut.TargetPath = $targetFile.FullName
+            $Shortcut.WorkingDirectory = $targetFile.DirectoryName
             $Shortcut.IconLocation = "$realPath,0"
             
             $Shortcut.Save()
             Write-Host "   [+] Shortcut created: $shortcutName" -ForegroundColor DarkGray
         } catch {
-            Write-Host "   [!] Failed to create shortcut" -ForegroundColor DarkGray
+            Write-Host "   [!] Failed to create shortcut" -ForegroundColor Red
         }
     } else {
-        # Если файл не найден (актуально для Ventoy, если он еще не распаковался)
-        Write-Host "   [!] Executable not found in Links folder for $AppId" -ForegroundColor DarkGray
+        Write-Host "   [!] Executable ($searchFileName) not found anywhere" -ForegroundColor DarkGray
     }
 }
 # --------------------------------
@@ -129,12 +142,10 @@ Write-Host "`n--- Installing new packages ---" -ForegroundColor Cyan
 $installedList = winget list --accept-source-agreements | Out-String
 
 foreach ($app in $appsToInstall) {
-    # Проверка установки
     $alreadyInstalled = $installedList -like "*$app*"
     
     if ($alreadyInstalled) {
         Write-Host "[SKIP] $app (Already installed)" -ForegroundColor Gray
-        # ЗДЕСЬ УБРАН ВЫЗОВ ФУНКЦИИ Add-WingetShortcut
         continue
     }
 
