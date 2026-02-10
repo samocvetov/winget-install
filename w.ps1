@@ -1,165 +1,54 @@
-# --- НАСТРОЙКИ СКРИПТА ---
-$ScriptVersion = "6.2.15"
+$Ver="6.3.0"; Clear-Host; Write-Host "=== WINGET AUTO-INSTALLER v$Ver ===" -F Cyan; Write-Host ""
 
-# Очищаем экран и выводим заголовок
-Clear-Host
-Write-Host "=============================================" -ForegroundColor Cyan
-Write-Host "    WINGET AUTO-INSTALLER  |  v$ScriptVersion    " -ForegroundColor Yellow
-Write-Host "=============================================" -ForegroundColor Cyan
-Write-Host ""
+$apps = @("7zip.7zip", "Notepad++.Notepad++", "RustDesk.RustDesk", "AnyDesk.AnyDesk", "VideoLAN.VLC", "PDFgear.PDFgear", "Google.Chrome", "Telegram.TelegramDesktop", "Zoom.Zoom", "Yandex.Browser", "Yandex.Messenger", "AdrienAllard.FileConverter", "alexx2000.DoubleCommander", "WinDirStat.WinDirStat", "Piriform.Recuva", "DominikReichl.KeePass", "ventoy.ventoy", "Termius.Termius", "WireGuard.WireGuard", "Mikrotik.Winbox", "REALiX.HWiNFO", "CPUID.CPU-Z", "TechPowerUp.GPU-Z", "angryziber.AngryIPScanner", "9NKSQGP7F2NH", "9NV4BS3L1H4S", "XPDDT99J9GKB5C")
+$fNames = @{ "9NKSQGP7F2NH"="WhatsApp"; "9NV4BS3L1H4S"="QuickLook"; "XPDDT99J9GKB5C"="Samsung Magician" }
 
-$appsToInstall = @(
-    "7zip.7zip", "Notepad++.Notepad++", "RustDesk.RustDesk", "AnyDesk.AnyDesk", "VideoLAN.VLC", 
-    "PDFgear.PDFgear", "Google.Chrome", "Telegram.TelegramDesktop", "Zoom.Zoom",
-    "Yandex.Browser", "Yandex.Messenger", "AdrienAllard.FileConverter", "alexx2000.DoubleCommander",
-    "WinDirStat.WinDirStat", "Piriform.Recuva", "DominikReichl.KeePass",
-    "ventoy.ventoy", "Termius.Termius", "WireGuard.WireGuard", "Mikrotik.Winbox",
-    "REALiX.HWiNFO", "CPUID.CPU-Z", "TechPowerUp.GPU-Z", "angryziber.AngryIPScanner",
-    "9NKSQGP7F2NH", "9NV4BS3L1H4S", "XPDDT99J9GKB5C"
-)
-
-$friendlyNames = @{
-    "9NKSQGP7F2NH" = "WhatsApp"
-    "9NV4BS3L1H4S" = "QuickLook"
-    "XPDDT99J9GKB5C" = "Samsung Magician"
-}
-
-# --- ФУНКЦИЯ СОЗДАНИЯ ЯРЛЫКОВ ---
-function Add-WingetShortcut {
-    param (
-        [string]$AppId
-    )
+function Add-Shortcut ($Id) {
+    $exes = @{ "ventoy.ventoy"="Ventoy2Disk.exe" }; $skip = @("angryziber.AngryIPScanner")
+    if ($Id -notmatch "\." -or $skip -contains $Id) { return }
+    $sMenu = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"; $desk = [Environment]::GetFolderPath("Desktop")
+    $links = "$env:LOCALAPPDATA\Microsoft\WinGet\Links"; $pkgs = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages"
+    $file = if ($exes[$Id]) { $exes[$Id] } else { "*$($Id.Split('.')[-1])*.exe" }
     
-    $StartMenuPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"
-    $WingetLinksPath = "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
-    $WingetPackagesPath = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages"
-    
-    # СЛОВАРЬ ИСКЛЮЧЕНИЙ: Точное имя exe файла для поиска
-    $exeOverrides = @{
-        "ventoy.ventoy" = "Ventoy2Disk.exe"
+    $target = Get-ChildItem $links -Filter $file -EA SilentlyContinue | Select -First 1
+    if (!$target) {
+        $dir = Get-ChildItem $pkgs -Filter "${Id}*" -Dir -EA SilentlyContinue | Sort LastWriteTime -Desc | Select -First 1
+        if ($dir) { $target = Get-ChildItem $dir.FullName -Filter $file -Recurse -EA SilentlyContinue | Select -First 1 }
     }
 
-    # 1. Определяем имя файла для поиска
-    if ($exeOverrides.ContainsKey($AppId)) {
-        $searchFileName = $exeOverrides[$AppId]
-    }
-    elseif ($AppId -match "\.") {
-        $cleanName = $AppId.Split('.')[-1]
-        $searchFileName = "*$cleanName*.exe"
-    } 
-    else {
-        return 
-    }
-    
-    # ПЕРЕМЕННАЯ ДЛЯ ХРАНЕНИЯ НАЙДЕННОГО ФАЙЛА
-    $targetFile = $null
-
-    # 2. ПОПЫТКА №1: Ищем в папке Links (быстрый способ для portable)
-    $targetFile = Get-ChildItem -Path $WingetLinksPath -Filter $searchFileName -ErrorAction SilentlyContinue | Select-Object -First 1
-
-    # 3. ПОПЫТКА №2: (ФОЛЛБЭК) Если в Links нет, ищем в папке установки Packages
-    if (-not $targetFile) {
-        # Ищем папку пакета (по ID)
-        $packageDir = Get-ChildItem -Path $WingetPackagesPath -Filter "${AppId}*" -Directory -ErrorAction SilentlyContinue | 
-                      Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        
-        if ($packageDir) {
-            # Ищем exe внутри папки пакета (рекурсивно)
-            $targetFile = Get-ChildItem -Path $packageDir.FullName -Filter $searchFileName -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-        }
-    }
-
-    # 4. СОЗДАНИЕ ЯРЛЫКА
-    if ($targetFile) {
-        $shortcutName = $targetFile.BaseName
-        $shortcutPath = "$StartMenuPath\$shortcutName.lnk"
-        $realPath = $targetFile.FullName
-
-        # Обработка симлинков
+    if ($target) {
+        $name = $target.BaseName; if ($name -eq "Ventoy2Disk") { $name = "Ventoy" }
+        $lnkS = "$sMenu\$name.lnk"; $lnkD = "$desk\$name.lnk"; $real = $target.FullName
+        try { if ($target.LinkType -eq 'SymbolicLink') { $t = $target.Target; if (![IO.Path]::IsPathRooted($t)) { $t = Join-Path $target.DirectoryName $t }; $real = (Get-Item $t).FullName } } catch {}
+        if (Test-Path $lnkS) { rm $lnkS -Force }
         try {
-            if ($targetFile.LinkType -eq 'SymbolicLink') {
-                $target = $targetFile.Target
-                if (-not [System.IO.Path]::IsPathRooted($target)) {
-                    $target = Join-Path $targetFile.DirectoryName $target
-                }
-                $realPath = (Get-Item $target).FullName
-            }
-        } catch {}
-
-        # Удаляем старый ярлык
-        if (Test-Path $shortcutPath) { Remove-Item $shortcutPath -Force }
-
-        try {
-            $WScript = New-Object -ComObject WScript.Shell
-            $Shortcut = $WScript.CreateShortcut($shortcutPath)
-            
-            $Shortcut.TargetPath = $targetFile.FullName
-            $Shortcut.WorkingDirectory = $targetFile.DirectoryName
-            $Shortcut.IconLocation = "$realPath,0"
-            
-            $Shortcut.Save()
-            Write-Host "   [+] Shortcut created: $shortcutName" -ForegroundColor DarkGray
-        } catch {
-            Write-Host "   [!] Failed to create shortcut" -ForegroundColor Red
-        }
-    }
-}
-# --------------------------------
-
-Write-Host "--- Checking for available updates ---" -ForegroundColor Cyan
-$updateRaw = winget upgrade --accept-source-agreements
-$lines = $updateRaw | Select-String -Pattern '^\S+' | Select-Object -Skip 2
-
-$foundUpdates = $false
-foreach ($line in $lines) {
-    $columns = $line.ToString() -split '\s{2,}'
-    if ($columns.Count -ge 2) {
-        $name = $columns[0].Trim()
-        $id = $columns[1].Trim()
-
-        if ($id -and $id -ne "ID" -and $id -ne "Name" -and $id -notlike "---*") {
-            $foundUpdates = $true
-            if ($id -match "\s") { $id = ($id -split "\s")[0] }
-
-            $confirmUpdate = Read-Host "Update available for $name ($id). Apply? [y/n]"
-            if ($confirmUpdate -eq 'y') {
-                Write-Host "Updating $id..." -ForegroundColor Yellow
-                winget upgrade --id "$id" --silent --force --accept-source-agreements --accept-package-agreements
-            }
-        }
+            $ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut($lnkS)
+            $s.TargetPath = $target.FullName; $s.WorkingDirectory = $target.DirectoryName; $s.IconLocation = "$real,0"; $s.Save()
+            Copy-Item $lnkS $lnkD -Force; Write-Host "   [+] Shortcut: $name" -F DarkGray
+        } catch { Write-Host "   [!] Shortcut failed" -F Red }
     }
 }
 
-if (-not $foundUpdates) {
-    Write-Host "No updates required." -ForegroundColor Green
-}
-
-Write-Host "`n--- Installing new packages ---" -ForegroundColor Cyan
-$installedList = winget list --accept-source-agreements | Out-String
-
-foreach ($app in $appsToInstall) {
-    $alreadyInstalled = $installedList -like "*$app*"
-    
-    if ($alreadyInstalled) {
-        Write-Host "[SKIP] $app (Already installed)" -ForegroundColor Gray
-        continue
-    }
-
-    $displayName = if ($friendlyNames.ContainsKey($app)) { $friendlyNames[$app] } else { $app }
-    $prompt = "Install " + $displayName + "? [y/n]"
-    $confirmation = Read-Host $prompt
-    
-    if ($confirmation -eq 'y') {
-        Write-Host "Processing $displayName..." -NoNewline -ForegroundColor White
-        $process = Start-Process winget -ArgumentList "install --id $app --silent --accept-source-agreements --accept-package-agreements" -NoNewWindow -Wait -PassThru
-        if ($process.ExitCode -eq 0) {
-            Write-Host "`r[ OK ] $displayName                       " -ForegroundColor Green
-            Add-WingetShortcut -AppId $app
-        } else {
-            Write-Host "`r[FAIL] $displayName (Error: $($process.ExitCode))" -ForegroundColor Red
-        }
+Write-Host "--- Checking updates ---" -F Cyan
+$raw = winget upgrade --accept-source-agreements; $lines = $raw | Select-String '^\S+' | Select -Skip 2
+foreach ($l in $lines) {
+    $c = $l.ToString() -split '\s{2,}'; if ($c.Count -lt 2) { continue }
+    $id = $c[1].Trim(); if ($id -match "\s") { $id = $id.Split(" ")[0] }
+    if ($id -and $id -ne "ID" -and $id -notlike "-*") {
+        if ((Read-Host "Update $id? [y/n]") -eq 'y') { winget upgrade --id $id -h --force --accept-source-agreements --accept-package-agreements }
     }
 }
 
-Write-Host "`nDone!" -ForegroundColor Cyan
-Start-Sleep -Seconds 3
+Write-Host "`n--- Installing ---" -F Cyan
+$inst = winget list --accept-source-agreements | Out-String
+foreach ($app in $apps) {
+    if ($inst -like "*$app*") { Write-Host "[SKIP] $app" -F Gray; continue }
+    $dName = if ($fNames[$app]) { $fNames[$app] } else { $app }
+    if ((Read-Host "Install $dName? [y/n]") -eq 'y') {
+        Write-Host "Installing $dName..." -NoNewline
+        $p = Start-Process winget -Args "install --id $app -h --accept-source-agreements --accept-package-agreements" -NoNewWindow -Wait -PassThru
+        if ($p.ExitCode -eq 0) { Write-Host "`r[ OK ] $dName           " -F Green; Add-Shortcut $app }
+        else { Write-Host "`r[FAIL] $dName ($($p.ExitCode))" -F Red }
+    }
+}
+Write-Host "`nDone!" -F Cyan; Start-Sleep 3
