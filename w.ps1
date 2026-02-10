@@ -42,7 +42,7 @@ foreach ($app in $apps) {
     if ($fNames.ContainsKey($app)) { $dName = $fNames[$app] }
 
     if ($inst -like "*$app*") { 
-        Write-Host "[SKIP] $dName" -F Gray 
+        Write-Host "[skip] $dName" -F Gray 
         continue 
     }
     $msg = "Install " + $dName + "? [y/n]"
