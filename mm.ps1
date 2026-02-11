@@ -4,7 +4,7 @@ Start-Process powershell "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandP
 $Path="C:\ODT"
 if(!(Test-Path $Path)){New-Item $Path -ItemType Directory|Out-Null}
 
-$odtUrl="https://download.microsoft.com/download/9/3/F/93F6B4C6-6B0A-4D7E-8F0E-AC5F45C42B9F/officedeploymenttool_18129-20158.exe"
+$odtUrl="https://aka.ms/odt"
 
 Invoke-WebRequest -Uri $odtUrl -OutFile "$Path\odt.exe"
 Start-Process "$Path\odt.exe" -ArgumentList "/quiet /extract:$Path" -Wait
@@ -23,4 +23,4 @@ Start-Process "$Path\odt.exe" -ArgumentList "/quiet /extract:$Path" -Wait
 
 Start-Process "$Path\setup.exe" -ArgumentList "/configure config.xml" -WorkingDirectory $Path -Wait
 
-Write-Host "Office LTSC 2024 installation finished!"
+Write-Host "Office LTSC 2024 installation finished!!"
