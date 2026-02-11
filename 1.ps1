@@ -30,7 +30,8 @@ $p=Start-Process $E -ArgumentList "/configure config.xml" -WorkingDirectory $W -
 if($p.ExitCode -eq 0){Write-Host "[ok] Office 2024"}else{Write-Host "[fail] Office 2024"}
 }else{Write-Host "[skip] Office 2024"}
 $p=Start-Process winget -ArgumentList "upgrade --all --silent --include-unknown --accept-package-agreements --disable-interactivity --nowarn" -NoNewWindow -Wait -PassThru
-if($p.ExitCode -eq 0){Write-Host "[ok] final upgrade"}else{Write-Host "[fail] final upgrade"}
+if($p.ExitCode -eq 0){Write-Host "[ok] final upgrade"}else{Write-Host "[info] final upgrade returned code $($p.ExitCode)"}
 Stop-Transcript|Out-Null
+Start-Sleep 2
 Start-Process powershell -ArgumentList "-NoExit -Command winget upgrade --all --silent --include-unknown --accept-package-agreements --disable-interactivity --nowarn"
 exit
