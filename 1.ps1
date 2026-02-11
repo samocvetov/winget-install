@@ -5,14 +5,14 @@ $inst = winget list --accept-source-agreements | Out-String
 foreach ($a in $apps) {
     if ($inst -notlike "*$a*") {
         Write-Host "Installing $a..." -NoNewline
-        $p = Start-Process winget -Args "install --id $a -e --silent --accept-source-agreements --accept-package-agreements --force" -NoNewWindow -Wait -PassThru
+        $p = Start-Process winget -Args "install --id $a -e --silent --accept-source-agreements --accept-package-agreements --force --source winget" -NoNewWindow -Wait -PassThru
         if ($p.ExitCode -eq 0) { Write-Host " [OK]" } else { Write-Host " [FAIL]" }
     }
 }
 
 Write-Host "`nChecking updates..."
-winget upgrade --accept-source-agreements
+winget upgrade --accept-source-agreements --source winget
 if ((Read-Host "Update all? [y/n]") -eq 'y') { 
-    winget upgrade --all --silent --accept-source-agreements --accept-package-agreements --include-unknown 
+    winget upgrade --all --silent --accept-source-agreements --accept-package-agreements --include-unknown --source winget
 }
 Write-Host "Done"; Start-Sleep 3
