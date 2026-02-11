@@ -1,16 +1,15 @@
-Write-Host "=== WINGET AUTO-INSTALLER ==="
-$c="--accept-source-agreements --accept-package-agreements --source winget"
+Clear-Host;Write-Host "=== WINGET AUTO-INSTALLER ==="
+
 winget source update --accept-source-agreements|Out-Null
-winget list $c|Out-Null
-Write-Host "Checking updates..."
-$u=winget upgrade $c
-if($LASTEXITCODE -eq 0 -and $u){Write-Host $u;if((Read-Host "Update all? [y/n]")-eq"y"){winget upgrade --all --silent --include-unknown $c}}else{Write-Host "System is up to date."}
-$a="7zip.7zip","Google.Chrome.EXE","Yandex.Browser","RustDesk.RustDesk","AnyDesk.AnyDesk","QL-Win.QuickLook","PDFgear.PDFgear","VideoLAN.VLC","AdrienAllard.FileConverter"
-foreach($i in $a){
-winget list --id $i -e $c|Out-Null
-if($LASTEXITCODE -ne 0){
+winget list --accept-source-agreements --accept-package-agreements|Out-Null
+
+$apps="7zip.7zip","Google.Chrome.EXE","Yandex.Browser","RustDesk.RustDesk","AnyDesk.AnyDesk","QL-Win.QuickLook","PDFgear.PDFgear","VideoLAN.VLC","AdrienAllard.FileConverter"
+
+foreach($i in $apps){
+$found=winget list --id $i -e --accept-source-agreements 2>$null
+if($found -match $i){Write-Host "[skip] $i";continue}
 Write-Host "Installing $i..." -NoNewline
-$p=Start-Process winget -ArgumentList "install --id $i -e --silent --force $c" -NoNewWindow -Wait -PassThru
-if($p.ExitCode -eq 0){Write-Host " [OK]"}else{Write-Host " [FAIL]"}}
-}
+$p=Start-Process winget -ArgumentList "install --id $i -e --silent --force --accept-source-agreements --accept-package-agreements" -NoNewWindow -Wait -PassThru
+if($p.ExitCode -eq 0){Write-Host " [ok]"}else{Write-Host " [fail]"}}
+
 Write-Host "Done";Start-Sleep 3
