@@ -40,3 +40,4 @@ Start-Process $C2R -ArgumentList "platform=x64 culture=ru-ru productstoremove=$C
 Write-Host "[ok] Office 2024 installed"
 }
 Stop-Transcript|Out-Null
+Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" | Where-Object { $_.DisplayName -like "*Microsoft Office*" } | Select-Object DisplayName, DisplayVersion
