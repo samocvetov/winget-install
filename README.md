@@ -15,7 +15,7 @@ irm https://get.activated.win | iex
 ```
 irm https://s.id/smcwg | iex
 ```
-
+or
 ```
 irm https://raw.githubusercontent.com/samocvetov/wginst/main/1.ps1 | iex
 ```
