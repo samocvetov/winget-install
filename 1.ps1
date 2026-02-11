@@ -1,4 +1,4 @@
-Write-Host "=== WINGET AUTO-INSTALLER ==="
+Write-Host "=== WINGET AUTO-INSTALLER 1==="
 $c="--accept-source-agreements --accept-package-agreements --source winget"
 winget source update --accept-source-agreements|Out-Null
 winget list $c|Out-Null
