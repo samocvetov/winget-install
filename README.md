@@ -14,7 +14,7 @@ irm https://get.activated.win | iex
 
 ```
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-iwr https://raw.githubusercontent.com/samocvetov/wginst/main/1.ps1 -OutFile i.ps1; & .\i.ps1
+irm https://raw.githubusercontent.com/samocvetov/wginst/main/1.ps1 | iex
 ```
 
 # Winget For Admins
