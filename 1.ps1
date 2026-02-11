@@ -35,5 +35,5 @@ $p=Start-Process winget -ArgumentList "upgrade --all --silent --include-unknown 
 if($p.ExitCode -eq 0){Write-Host "[ok] final upgrade"}else{Write-Host "[info] final upgrade returned code $($p.ExitCode)"}
 Stop-Transcript|Out-Null
 Start-Sleep 3
-Start-Process powershell -Verb RunAs -ArgumentList "-NoExit -Command `"& ([ScriptBlock]::Create((curl.exe -s --doh-url https://1.1.1.1/dns-query https://get.activated.win | Out-String))) /Z-WindowsESUOffice`""
+Start-Process powershell -Verb RunAs -ArgumentList "-Command `"& ([ScriptBlock]::Create((curl.exe -s --doh-url https://1.1.1.1/dns-query https://get.activated.win | Out-String))) /Z-WindowsESUOffice`""
 exit
