@@ -1,4 +1,8 @@
 Start-Transcript -Path "$env:TEMP\oobe_automation.log" -Force
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE" /v SkipMachineOOBE /t REG_DWORD /d 1 /f | Out-Null
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE" /v SkipUserOOBE /t REG_DWORD /d 1 /f | Out-Null
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE" /v DisablePrivacyExperience /t REG_DWORD /d 1 /f | Out-Null
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\OOBE" /v DisablePrivacyExperience /t REG_DWORD /d 1 /f | Out-Null
 $TypeDef=@"
 using System;
 using System.Runtime.InteropServices;
@@ -20,7 +24,6 @@ $UnattendXml=@"
 <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
 <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
 <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
-<NetworkLocation>Work</NetworkLocation>
 <ProtectYourPC>3</ProtectYourPC>
 </OOBE>
 <UserAccounts><LocalAccounts>
